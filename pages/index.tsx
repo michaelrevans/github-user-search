@@ -83,6 +83,7 @@ const Home: NextPage = () => {
         <Form onSubmit={handleSubmit}>
           <InputGroup className={styles.fieldGroup}>
             <Form.Control
+              autoComplete="off"
               placeholder="Username"
               id="username"
               value={username}
@@ -133,11 +134,10 @@ const showResults = ({ username, repos, error, loading }: Results) => {
   }
 
   return (
-    <Table striped bordered hover>
+    <Table striped bordered hover responsive>
       <thead>
         <tr className="bg-info bg-opacity-25">
-          <th>Repo name</th>
-          <th>Link</th>
+          <th>Repo</th>
           <th>Language</th>
           <th>Last updated</th>
         </tr>
@@ -145,10 +145,14 @@ const showResults = ({ username, repos, error, loading }: Results) => {
       <tbody>
         {repos?.map((repo: Repository) => (
           <tr key={repo.name}>
-            <td>{repo.name}</td>
             <td>
-              <a href={repo.html_url} target="_blank" className="text-success">
-                {repo.html_url}
+              <a
+                href={repo.html_url}
+                target="_blank"
+                className="text-success"
+                title="Open in a new tab"
+              >
+                {repo.name}
               </a>
             </td>
             <td>{repo.language}</td>
