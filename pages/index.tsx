@@ -7,6 +7,7 @@ import InputGroup from "react-bootstrap/InputGroup";
 import Table from "react-bootstrap/Table";
 import { useFetch } from "use-http";
 import React, { useMemo, useState } from "react";
+import Alert from "react-bootstrap/Alert";
 
 interface Repository extends Record<string, any> {
   name: string;
@@ -22,11 +23,12 @@ interface FetchError {
 
 const formatDate = (rawDate: string): string => {
   const date = new Date(rawDate);
-  const day = date.getDate();
-  const month = date.getMonth();
-  const year = date.getFullYear();
-
-  return `${month} ${day}, ${year}`;
+  const options: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  };
+  return date.toLocaleDateString("en-GB", options);
 };
 
 const sortRepos = (
@@ -42,7 +44,8 @@ const sortRepos = (
 };
 
 const Home: NextPage = () => {
-  const [username, setUsername] = useState<string>("michaelrevans");
+  const [username, setUsername] = useState<string>("");
+  const [fetchedUsername, setFetchedUsername] = useState<string>("");
   const [repos, setRepos] = useState<Repository[]>([]);
   const { get, loading, error } = useFetch<Repository[]>(
     "https://api.github.com/users"
@@ -50,9 +53,10 @@ const Home: NextPage = () => {
 
   const sortedRepos = useMemo(() => sortRepos(repos), [repos]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event?.preventDefault();
-    const repos = await get(username + '/repos');
+    setFetchedUsername(username);
+    const repos = await get(username + "/repos");
     setRepos(repos);
   };
 
@@ -88,44 +92,71 @@ const Home: NextPage = () => {
           </InputGroup>
         </Form>
 
-        {loading ? (
-          <div>Loading</div>
-        ) : error ? (
-          <div>Something went wrong, please try again</div>
-        ) : (
-          <div className={styles.results}>
-            <Table striped bordered hover>
-              <thead>
-                <tr className="bg-info bg-opacity-25">
-                  <th>Repo name</th>
-                  <th>Link</th>
-                  <th>Language</th>
-                  <th>Last updated</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRepos?.map((repo: Repository) => (
-                  <tr key={repo.name}>
-                    <td>{repo.name}</td>
-                    <td>
-                      <a
-                        href={repo.html_url}
-                        target="_blank"
-                        className="text-success"
-                      >
-                        {repo.html_url}
-                      </a>
-                    </td>
-                    <td>{repo.language}</td>
-                    <td>{formatDate(repo.updated_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </div>
-        )}
+        <div className={styles.results}>
+          {showResults({
+            username: fetchedUsername,
+            repos: sortedRepos,
+            error,
+            loading,
+          })}
+        </div>
       </div>
     </div>
+  );
+};
+
+interface Results {
+  username: string;
+  repos: Repository[];
+  error: Error | undefined;
+  loading: boolean;
+}
+
+const showResults = ({ username, repos, error, loading }: Results) => {
+  if (error) {
+    return (
+      <Alert variant="danger">
+        Something went wrong, make sure to enter a valid GitHub username.
+      </Alert>
+    );
+  }
+  if (loading) {
+    return <Alert variant="warning">loading</Alert>;
+  }
+  if (username.length == 0) {
+    return (
+      <Alert variant="success">Enter GitHub username to see their repos.</Alert>
+    );
+  }
+  if (repos.length == 0) {
+    return <Alert variant="info">No repos to show for {username}</Alert>;
+  }
+
+  return (
+    <Table striped bordered hover>
+      <thead>
+        <tr className="bg-info bg-opacity-25">
+          <th>Repo name</th>
+          <th>Link</th>
+          <th>Language</th>
+          <th>Last updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        {repos?.map((repo: Repository) => (
+          <tr key={repo.name}>
+            <td>{repo.name}</td>
+            <td>
+              <a href={repo.html_url} target="_blank" className="text-success">
+                {repo.html_url}
+              </a>
+            </td>
+            <td>{repo.language}</td>
+            <td>{formatDate(repo.updated_at)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </Table>
   );
 };
 
